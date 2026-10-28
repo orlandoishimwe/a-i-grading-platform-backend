@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: grading-system
+  datasource:
+    url: jdbc:postgresql://localhost:5432/grading_db
+    username: ${DB_USER:orlandoishimwe}
+    password: ${DB_PASSWORD:auca2026}
+  jpa: 
+    open-in-view: false
+    hibernate:
+      ddl_auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:z+O9RM9UGW479lM7qJL/oCLdTi9NR8XQkjgWoyY2aG4=}
+    expiration_minutes: 60
+
+server:
+  port: 8080
