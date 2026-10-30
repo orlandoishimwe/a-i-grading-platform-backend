@@ -12,4 +12,6 @@ import auca.AiGrading.model.Submission;
 public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     List<Submission> findByStatusOrderBySubmittedDateAsc(SubmissionStatus status);
     List<Submission> findBySubmittedDateBetweenOrderBySubmittedDateAsc(LocalDate start, LocalDate end);
+
+    boolean existsByExaminerIdAndSubmittedDateAndStatusNot(UUID examinerId, LocalDate submittedDate, SubmissionStatus status);
 }

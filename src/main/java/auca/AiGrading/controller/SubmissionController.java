@@ -31,7 +31,14 @@ public class SubmissionController {
 
     @PostMapping ("/save")
     public ResponseEntity<String> save(@RequestBody Submission submission) {
-        return new ResponseEntity<>(submissionServ.save(submission), HttpStatus.CREATED);
+        String message = submissionServ.save(submission);
+        if (message.equals("Submission cannot be in the past")) {
+            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+        } else if (message.equals("Examiner already has a submission to review on that date")) {
+            return new ResponseEntity<>(message, HttpStatus.CONFLICT);
+        } else {
+            return new ResponseEntity<>(message, HttpStatus.CREATED);
+        }
     }
 
     @GetMapping ("/all")
@@ -71,11 +78,25 @@ public class SubmissionController {
         }
     }
 
+    @PutMapping ("/{id}/status")
+    public ResponseEntity<String> updateStatus(@PathVariable UUID id, @RequestParam SubmissionStatus status) {
+        String message = submissionServ.updateStatus(id, status);
+        if (message.contains("does not exist")) {
+            return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.startsWith("Cannot change status")) {
+            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
+        } else {
+            return new ResponseEntity<>(message, HttpStatus.OK);
+        }
+    }
+
     @DeleteMapping ("/delete/{id}")
     public ResponseEntity<String> delete(@PathVariable UUID id) {
         String message = submissionServ.delete(id);
         if (message.contains("does not exist")) {
             return new ResponseEntity<>(message, HttpStatus.NOT_FOUND);
+        } else if (message.contains("delete them first")) {
+            return new ResponseEntity<>(message, HttpStatus.BAD_REQUEST);
         } else {
             return new ResponseEntity<>(message, HttpStatus.OK);
         }

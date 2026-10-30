@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import auca.AiGrading.enums.SubmissionStatus;
 import auca.AiGrading.model.Submission;
+import auca.AiGrading.repository.RubricScoreRepository;
 import auca.AiGrading.repository.SubmissionRepository;
 
 @Service 
@@ -18,7 +19,18 @@ public class SubmissionService {
     @Autowired 
     private SubmissionRepository submissionRepo;
 
+    private RubricScoreRepository rubricScoreRepo;
+
     public String save(Submission submission) {
+        if (submission.getSubmittedDate().isBefore(LocalDate.now())) {
+            return "Submission date cannot be in the past";
+        }
+        if (submission.getExaminer() != null
+                && submissionRepo.existsByExaminerIdAndSubmittedDateAndStatusNot(submission.getExaminer().getId(),
+                submission.getSubmittedDate(), SubmissionStatus.REJECTED)) {
+            return "Examiner already has a submission to review on that date";
+        }
+        submission.setStatus(SubmissionStatus.UPLOADED);
         submissionRepo.save(submission);
         return "Submission saved successfully";
     }
@@ -39,7 +51,6 @@ public class SubmissionService {
 
         Submission existing = found.get();
         existing.setFileName(submission.getFileName());
-        existing.setStatus(submission.getStatus());
         existing.setSubmittedDate(submission.getSubmittedDate());
         existing.setTitle(submission.getTitle());
         existing.setStudent(submission.getStudent());
@@ -48,9 +59,39 @@ public class SubmissionService {
         return "Submission updated successfully";
     }
 
+    public String updateStatus(UUID id, SubmissionStatus newStatus) {
+        Optional<Submission> found = submissionRepo.findById(id);
+        if (found.isEmpty()) {
+            return "The submission with that id does not exist";
+        }
+        Submission submission = found.get();
+        SubmissionStatus current = submission.getStatus();
+
+        boolean allowed = false;
+        if (current == SubmissionStatus.UPLOADED
+                && (newStatus == SubmissionStatus.AI_GRADED || newStatus == SubmissionStatus.REJECTED))
+        {
+            allowed = true;
+        } else if (current == SubmissionStatus.AI_GRADED &&
+            (newStatus == SubmissionStatus.REVIEWED || newStatus == SubmissionStatus.REJECTED)
+        ) {
+            allowed = true;
+        }
+
+        if (!allowed) {
+            return "Cannot change the status from " + current + " to " + newStatus;
+        }
+        submission.setStatus(newStatus);
+        submissionRepo.save(submission);
+        return "Submission status updated successfully";
+    }
+
     public String delete(UUID id) {
-        if (!submissionRepo.existsById(id)) {
-            return "Submission with that id does not exist";
+        Optional<Submission> found = submissionRepo.findById(id);
+        if (found.isEmpty()) {
+            return "The submission with that id does not exist";
+        } if (rubricScoreRepo.existsBySubmission(found.get())) {
+            return "That submission has rubric scores, delete them first";
         }
         submissionRepo.deleteById(id);
         return "Submission deleted successfully";
